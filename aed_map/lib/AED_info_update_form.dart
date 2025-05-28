@@ -9,7 +9,7 @@ import 'package:geolocator/geolocator.dart';
 /// 1. AED 상세 정보 다이얼로그 하단에 '정보 수정 제안' 버튼 추가
 void showAedEditSuggestionForm(BuildContext context, Map<String, String> currentData, Function(Map<String, String>, XFile?, Position?) onSubmit) {
   final formKey = GlobalKey<FormState>();
-  final updatedData = <String, String>{};
+  final updatedData = Map<String, String>.from(currentData);
   XFile? selectedImage;
   Position? currentPosition;
 
@@ -64,12 +64,12 @@ void showAedEditSuggestionForm(BuildContext context, Map<String, String> current
               if (currentPosition != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('위도: \${currentPosition.latitude}, 경도: \${currentPosition.longitude}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  child: Text('위도: ${currentPosition?.latitude}, 경도: ${currentPosition?.longitude}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ),
               if (selectedImage != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('📷 사진이 선택됨: \${selectedImage.name}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  child: Text('📷 사진이 선택됨: ${selectedImage?.name}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ),
               SizedBox(height: 16),
               ElevatedButton(
@@ -102,7 +102,7 @@ void showAedEditSuggestionForm(BuildContext context, Map<String, String> current
 
 /// 4. API 요청 예시 (Dio or http)
 Future<void> submitAedSuggestion(int id, Map<String, String> updates, XFile? photo, Position? location) async {
-  final uri = Uri.parse('http://192.168.219.103:8080/api/aeds/{$id}/suggest');
+  final uri = Uri.parse('http://192.168.219.103:8080/api/aeds/$id/suggest');
   final request = http.MultipartRequest('POST', uri);
   request.fields.addAll(updates);
   if (location != null) {

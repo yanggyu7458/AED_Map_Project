@@ -70,7 +70,7 @@ public class AedInfoController {
 
     // 기존 AED 정보 수정 요청
     @PostMapping(value = "/{id}/suggest", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> suggestAEDUpdate(@PathVariable Long id, @RequestPart(required = false) MultipartFile photo, @RequestParam Map<String, String> updates) {
+    public ResponseEntity<String> suggestAEDUpdate(@PathVariable("id") Long id, @RequestPart(value = "photo", required = false) MultipartFile photo, @RequestParam Map<String, String> updates) {
         Optional<AedInfo> optional = aedInfoRepository.findById(id);
         if (optional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("AED 정보가 존재하지 않습니다.");
