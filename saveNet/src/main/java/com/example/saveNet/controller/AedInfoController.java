@@ -1,5 +1,9 @@
 package com.example.saveNet.controller;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -91,11 +95,32 @@ public class AedInfoController {
         if (updates.containsKey("longitude"))
         request.setLongitude(Double.valueOf(updates.get("longitude")));
 
-        if (photo != null) {
+        /*
+         if (photo != null) {
             request.setPhotoFileName(photo.getOriginalFilename());
             System.out.println("사진 파일 이름 : " + photo.getOriginalFilename());
         }
+         */
 
+         // 실제 파일 저장
+         if (photo != null && !photo.isEmpty()) {
+            try {
+                String uploadDir = System.getProperty("user.dir") + "/src/main/resources/static/UpdateRequestImg/";
+                File saveDir = new File(uploadDir);
+                if (!saveDir.exists()) {
+                    saveDir.mkdir();
+                }
+
+                String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
+                Path filePath = Paths.get(uploadDir + fileName);
+                photo.transferTo(filePath.toFile());
+                request.setPhotoFileName(fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 저장 실패");
+            }
+         }
+        
         aedUpdateRequestRepository.save(request);
 
         return ResponseEntity.ok("제안 접수 완료");
