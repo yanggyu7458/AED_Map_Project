@@ -1,5 +1,6 @@
 /// AED 정보 수정 제안 기능 및 신규 AED 등록 기능 구현 아이디어
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +13,7 @@ void showAedEditSuggestionForm(BuildContext context, Map<String, String> current
   final updatedData = Map<String, String>.from(currentData);
   XFile? selectedImage;
   Position? currentPosition;
+  StreamSubscription<ServiceStatus>? locationSubscription;
 
   showModalBottomSheet(
     context: context,
@@ -24,67 +26,94 @@ void showAedEditSuggestionForm(BuildContext context, Map<String, String> current
         top: 24,
       ),
       child: StatefulBuilder(
-        builder: (context, setState) => SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('정보 수정 제안', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Form(
-                key: formKey,
-                child: Column(
-                  children: currentData.entries.map((entry) {
-                    return TextFormField(
-                      initialValue: entry.value,
-                      decoration: InputDecoration(labelText: entry.key),
-                      onChanged: (value) => updatedData[entry.key] = value,
-                    );
-                  }).toList(),
-                ),
+        builder: (context, setState) {
+          Future<void> disposeResources() async {
+            await locationSubscription?.cancel();
+            selectedImage = null;
+          }
+
+          return WillPopScope(
+            onWillPop: () async {
+              await disposeResources();
+              return true;
+            },
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('정보 수정 제안', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Form(
+                    key: formKey,
+                    child: Column(
+                      children: currentData.entries.map((entry) {
+                        return TextFormField(
+                          initialValue: entry.value,
+                          decoration: InputDecoration(labelText: entry.key),
+                          onChanged: (value) => updatedData[entry.key] = value,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.photo_camera),
+                    label: Text('사진 업로드'),
+                    onPressed: () async {
+                      final picker = ImagePicker();
+                      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+                      if (pickedFile != null) {
+                        setState(() => selectedImage = pickedFile);
+                      }
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.my_location),
+                    label: Text('현재 위치 가져오기'),
+                    onPressed: () async {
+                      final position = await Geolocator.getCurrentPosition();
+                      setState(() => currentPosition = position);
+                      locationSubscription = Geolocator.getServiceStatusStream().listen((_) {});
+                    },
+                  ),
+                  if (currentPosition != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text('위도: ${currentPosition?.latitude}, 경도: ${currentPosition?.longitude}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ),
+                  if (selectedImage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text('📷 사진이 선택됨: ${selectedImage?.name}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ),
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          disposeResources();
+                          Navigator.pop(context);
+                        },
+                        child: Text('뒤로가기'),
+                      ),
+                      ElevatedButton(
+                        child: Text('제출'),
+                        onPressed: () async {
+                          if (formKey.currentState!.validate()) {
+                            await onSubmit(updatedData, selectedImage, currentPosition);
+                            await disposeResources();
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                ],
               ),
-              SizedBox(height: 10),
-              ElevatedButton.icon(
-                icon: Icon(Icons.photo_camera),
-                label: Text('사진 업로드'),
-                onPressed: () async {
-                  final picker = ImagePicker();
-                  final pickedFile = await picker.pickImage(source: ImageSource.camera);
-                  if (pickedFile != null) {
-                    setState(() => selectedImage = pickedFile);
-                  }
-                },
-              ),
-              ElevatedButton.icon(
-                icon: Icon(Icons.my_location),
-                label: Text('현재 위치 가져오기'),
-                onPressed: () async {
-                  final position = await Geolocator.getCurrentPosition();
-                  setState(() => currentPosition = position);
-                },
-              ),
-              if (currentPosition != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('위도: ${currentPosition?.latitude}, 경도: ${currentPosition?.longitude}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                ),
-              if (selectedImage != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('📷 사진이 선택됨: ${selectedImage?.name}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                child: Text('제출'),
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    onSubmit(updatedData, selectedImage, currentPosition);
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-              SizedBox(height: 10),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     ),
   );
